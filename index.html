@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DebateDaily — What's Your Take?</title>
+<meta name="description" content="One hot topic. Every day. Thousands of takes. Join the debate."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0A0A0B;
+  --surface:#111113;
+  --surface2:#18181C;
+  --surface3:#222228;
+  --border:#2A2A32;
+  --border2:#3A3A45;
+  --text:#F0EFE8;
+  --text2:#9A9AA8;
+  --text3:#5A5A68;
+  --flame:#E8572A;
+  --flame2:#F07040;
+  --gold:#D4A017;
+  --gold2:#F0C040;
+  --green:#2DB882;
+  --red:#E84444;
+  --blue:#4A90E2;
+  --radius:12px;
+  --radius-sm:8px;
+  --radius-lg:20px;
+}
+
+html{scroll-behavior:smooth}
+body{
+  font-family:'Syne',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* NOISE OVERLAY */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:0.4;
+}
+
+/* NAV */
+nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;height:60px;
+  background:rgba(10,10,11,0.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+
+.logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.6rem;letter-spacing:0.05em;
+  color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+
+.logo-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--flame);
+  animation:throb 1.8s ease-in-out infinite;
+}
+
+@keyframes throb{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
+
+.nav-right{display:flex;align-items:center;gap:12px}
+
+.btn{
+  font-family:'Syne',sans-serif;
+  font-size:13px;font-weight:600;
+  padding:8px 18px;border-radius:var(--radius-sm);
+  border:none;cursor:pointer;transition:all 0.18s;
+  letter-spacing:0.02em;
+}
+
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text2)}
+
+.btn-flame{background:var(--flame);color:#fff}
+.btn-flame:hover{background:var(--flame2);transform:translateY(-1px)}
+
+.btn-sm{padding:6px 14px;font-size:12px}
+
+/* HERO */
+.hero{
+  position:relative;
+  padding:4rem 2rem 3rem;
+  text-align:center;
+  overflow:hidden;
+}
+
+.hero::before{
+  content:'';
+  position:absolute;top:-200px;left:50%;transform:translateX(-50%);
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(232,87,42,0.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--flame);margin-bottom:1.5rem;
+}
+
+.live-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--flame);
+  animation:throb 1.2s ease-in-out infinite;
+}
+
+.hero-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(3.5rem,10vw,7rem);
+  line-height:0.95;letter-spacing:0.02em;
+  color:var(--text);margin-bottom:1rem;
+}
+
+.hero-title .accent{color:var(--flame)}
+
+.hero-sub{
+  font-family:'Instrument Serif',serif;
+  font-style:italic;font-size:clamp(1rem,2.5vw,1.3rem);
+  color:var(--text2);max-width:500px;margin:0 auto 2rem;
+  line-height:1.6;
+}
+
+.countdown-strip{
+  display:inline-flex;align-items:center;gap:16px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:10px 24px;
+  font-size:13px;color:var(--text2);
+}
+
+.countdown-time{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.4rem;letter-spacing:0.08em;
+  color:var(--gold2);
+}
+
+/* MAIN LAYOUT */
+.main{
+  max-width:900px;margin:0 auto;
+  padding:2rem;
+  position:relative;z-index:1;
+}
+
+/* TODAY'S TOPIC CARD */
+.topic-main{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  margin-bottom:2rem;
+}
+
+.topic-header{
+  background:var(--flame);
+  padding:1rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+
+.topic-header-label{
+  font-size:11px;font-weight:700;letter-spacing:0.15em;
+  text-transform:uppercase;color:rgba(255,255,255,0.8);
+}
+
+.topic-date{font-size:12px;color:rgba(255,255,255,0.7)}
+
+.topic-body{padding:2rem 1.5rem 1.5rem}
+
+.topic-question{
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(1.3rem,3.5vw,2rem);
+  line-height:1.3;color:var(--text);
+  margin-bottom:1.5rem;
+}
+
+.topic-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem}
+
+.tag{
+  font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  padding:4px 12px;border-radius:20px;
+  background:var(--surface2);color:var(--text2);
+  border:1px solid var(--border);
+}
+
+/* VOTE SECTION */
+.vote-section{margin-bottom:1.5rem}
+
+.vote-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+
+.vote-btn{
+  padding:1rem;border-radius:var(--radius);border:2px solid var(--border2);
+  background:var(--surface2);color:var(--text2);
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;transition:all 0.2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+
+.vote-btn:hover{border-color:var(--border2);background:var(--surface3)}
+.vote-btn.for:hover,.vote-btn.for.voted{border-color:var(--green);color:var(--green);background:rgba(45,184,130,0.08)}
+.vote-btn.against:hover,.vote-btn.against.voted{border-color:var(--red);color:var(--red);background:rgba(232,68,68,0.08)}
+
+.vote-bar-row{display:flex;align-items:center;gap:10px}
+.vote-bar-label{font-size:12px;font-weight:700;min-width:48px}
+.vote-bar-label.for{color:var(--green)}
+.vote-bar-label.against{color:var(--red);text-align:right}
+
+.vote-bar-track{
+  flex:1;height:6px;border-radius:99px;
+  background:rgba(232,68,68,0.3);overflow:hidden;
+}
+
+.vote-bar-fill{height:100%;border-radius:99px;background:var(--green);transition:width 0.6s cubic-bezier(.4,0,.2,1)}
+
+/* STATS ROW */
+.stats-row{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--border);
+  border-top:1px solid var(--border);
+}
+
+.stat-box{
+  background:var(--surface);
+  padding:1rem;text-align:center;
+}
+
+.stat-n{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.8rem;letter-spacing:0.05em;
+  color:var(--text);line-height:1;
+  margin-bottom:4px;
+}
+
+.stat-l{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
+
+/* AUTH WALL */
+.auth-wall{
+  background:var(--surface2);
+  border:1px dashed var(--border2);
+  border-radius:var(--radius);
+  padding:2rem;text-align:center;
+  margin-bottom:1.5rem;
+}
+
+.auth-wall h3{font-size:1rem;font-weight:700;margin-bottom:0.5rem}
+.auth-wall p{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+
+.auth-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+.auth-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 20px;border-radius:var(--radius-sm);
+  border:1px solid var(--border2);
+  background:var(--surface3);color:var(--text);
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all 0.18s;
+}
+
+.auth-btn:hover{border-color:var(--text2);background:var(--surface)}
+.auth-btn.google{border-color:#4285F4;color:#4285F4}
+.auth-btn.github{border-color:#6e40c9;color:#a78bfa}
+.auth-btn.anon{border-color:var(--text3);color:var(--text2)}
+
+/* COMMENT INPUT */
+.comment-box{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  margin-bottom:1.5rem;
+}
+
+.stance-pills{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+
+.stance-pill{
+  font-family:'Syne',sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:0.05em;
+  padding:5px 14px;border-radius:20px;
+  border:1px solid var(--border2);
+  background:transparent;color:var(--text3);
+  cursor:pointer;transition:all 0.15s;
+}
+
+.stance-pill.sel-for{background:rgba(45,184,130,0.15);color:var(--green);border-color:var(--green)}
+.stance-pill.sel-against{background:rgba(232,68,68,0.15);color:var(--red);border-color:var(--red)}
+.stance-pill.sel-neutral{background:rgba(74,144,226,0.15);color:var(--blue);border-color:var(--blue)}
+
+.comment-input{
+  width:100%;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:'Syne',sans-serif;font-size:14px;
+  padding:1rem;resize:none;min-height:90px;outline:none;
+  transition:border-color 0.15s;
+  margin-bottom:0.75rem;
+}
+
+.comment-input::placeholder{color:var(--text3)}
+.comment-input:focus{border-color:var(--flame)}
+
+.input-footer{display:flex;align-items:center;justify-content:space-between}
+.char-counter{font-size:12px;color:var(--text3)}
+
+/* DEBATE FEED */
+.feed-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1rem;
+}
+
+.feed-title{
+  font-size:11px;font-weight:700;letter-spacing:0.15em;
+  text-transform:uppercase;color:var(--text2);
+}
+
+.sort-group{display:flex;gap:4px}
+
+.sort-btn{
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:600;
+  padding:5px 12px;border-radius:20px;
+  border:1px solid var(--border);
+  background:transparent;color:var(--text3);cursor:pointer;
+  transition:all 0.15s;
+}
+
+.sort-btn.active{background:var(--flame);color:#fff;border-color:var(--flame)}
+
+/* COMMENT CARD */
+.comment-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  margin-bottom:0.75rem;
+  transition:border-color 0.2s;
+  animation:slideIn 0.3s ease;
+}
+
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.comment-card:hover{border-color:var(--border2)}
+
+.comment-card.pinned{
+  border-color:var(--gold);
+  background:linear-gradient(135deg,var(--surface) 0%,rgba(212,160,23,0.06) 100%);
+}
+
+.pin-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--gold2);margin-bottom:0.75rem;
+}
+
+.comment-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:0.75rem}
+
+.avatar{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;
+}
+
+.avatar.for{background:rgba(45,184,130,0.2);color:var(--green)}
+.avatar.against{background:rgba(232,68,68,0.2);color:var(--red)}
+.avatar.neutral{background:rgba(74,144,226,0.2);color:var(--blue)}
+
+.comment-meta-wrap{flex:1}
+.comment-author{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.comment-time{font-size:11px;color:var(--text3)}
+
+.stance-badge{
+  font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  padding:3px 10px;border-radius:20px;flex-shrink:0;
+}
+
+.stance-badge.for{background:rgba(45,184,130,0.15);color:var(--green)}
+.stance-badge.against{background:rgba(232,68,68,0.15);color:var(--red)}
+.stance-badge.neutral{background:rgba(74,144,226,0.15);color:var(--blue)}
+
+.comment-text{
+  font-size:14px;line-height:1.65;color:var(--text);
+  margin-bottom:1rem;
+}
+
+.comment-actions{display:flex;gap:16px;align-items:center}
+
+.action-btn{
+  display:flex;align-items:center;gap:5px;
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:600;
+  color:var(--text3);background:none;border:none;cursor:pointer;
+  transition:color 0.15s;padding:0;
+}
+
+.action-btn:hover{color:var(--text2)}
+.action-btn.upvoted{color:var(--flame)}
+
+/* ARCHIVE / INSIGHTS */
+.section-title-lg{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;letter-spacing:0.05em;
+  color:var(--text);margin-bottom:1.5rem;
+  margin-top:3rem;
+}
+
+.archive-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:1rem;margin-bottom:3rem;
+}
+
+.archive-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  cursor:pointer;transition:all 0.2s;
+}
+
+.archive-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+
+.archive-date{font-size:11px;color:var(--text3);font-weight:600;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.08em}
+.archive-q{
+  font-family:'Instrument Serif',serif;font-size:1rem;
+  color:var(--text);line-height:1.4;margin-bottom:1rem;
+}
+
+.archive-bar{height:4px;border-radius:99px;background:rgba(232,68,68,0.3);overflow:hidden;margin-bottom:0.75rem}
+.archive-fill{height:100%;border-radius:99px;background:var(--green)}
+
+.archive-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);font-weight:600}
+
+/* INSIGHTS */
+.insights-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:1rem;margin-bottom:3rem;
+}
+
+.insight-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.25rem;
+}
+
+.insight-icon{font-size:1.5rem;margin-bottom:0.5rem}
+.insight-val{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;letter-spacing:0.05em;
+  color:var(--flame);line-height:1;margin-bottom:4px;
+}
+
+.insight-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em}
+
+/* ADMIN PANEL */
+.admin-panel{
+  background:var(--surface);
+  border:1px solid var(--gold);
+  border-radius:var(--radius);
+  padding:1.5rem;margin-bottom:2rem;
+}
+
+.admin-title{
+  font-size:11px;font-weight:700;letter-spacing:0.15em;
+  text-transform:uppercase;color:var(--gold2);margin-bottom:1rem;
+}
+
+.admin-suggestions{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
+
+.suggestion-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:0.75rem 1rem;cursor:pointer;
+  transition:all 0.15s;
+}
+
+.suggestion-item:hover{border-color:var(--border2)}
+.suggestion-text{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+.suggestion-score{font-size:11px;color:var(--flame);font-weight:700}
+
+.admin-input{
+  width:100%;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:'Syne',sans-serif;font-size:14px;
+  padding:0.75rem 1rem;outline:none;margin-bottom:0.75rem;
+}
+
+.admin-input:focus{border-color:var(--gold)}
+
+/* USER PROFILE BAR */
+.user-bar{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:0.75rem 1rem;
+  margin-bottom:1rem;
+}
+
+.user-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--flame);display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:#fff;flex-shrink:0;
+}
+
+.user-name{font-size:13px;font-weight:700;color:var(--text)}
+.user-mode{font-size:11px;color:var(--text3)}
+
+.signout-btn{
+  margin-left:auto;font-size:11px;color:var(--text3);
+  background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;
+  font-weight:600;transition:color 0.15s;
+}
+
+.signout-btn:hover{color:var(--text2)}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+
+.modal-overlay.open{display:flex}
+
+.modal{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius-lg);padding:2rem;
+  width:90%;max-width:440px;
+  animation:modalIn 0.25s ease;
+}
+
+@keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+
+.modal-title{
+  font-family:'Bebas Neue',sans-serif;font-size:1.8rem;
+  letter-spacing:0.05em;color:var(--text);margin-bottom:0.5rem;
+}
+
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.5}
+
+.modal-divider{
+  display:flex;align-items:center;gap:10px;
+  font-size:11px;color:var(--text3);margin:1rem 0;
+}
+
+.modal-divider::before,.modal-divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+.modal-input{
+  width:100%;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:'Syne',sans-serif;font-size:14px;
+  padding:0.75rem 1rem;outline:none;margin-bottom:0.75rem;
+}
+
+.modal-input:focus{border-color:var(--flame)}
+
+.modal-close{
+  position:absolute;top:1rem;right:1rem;
+  background:none;border:none;color:var(--text3);cursor:pointer;
+  font-size:1.2rem;
+}
+
+.toast{
+  position:fixed;bottom:2rem;right:2rem;z-index:300;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:0.75rem 1.25rem;
+  font-size:13px;font-weight:600;color:var(--text);
+  transform:translateY(100px);opacity:0;
+  transition:all 0.3s ease;pointer-events:none;
+}
+
+.toast.show{transform:translateY(0);opacity:1}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:2rem}
+
+.tab{
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+  letter-spacing:0.05em;text-transform:uppercase;
+  padding:1rem 1.5rem;border:none;background:transparent;
+  color:var(--text3);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:all 0.15s;
+}
+
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--flame);border-bottom-color:var(--flame)}
+
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* TRENDING BAR */
+.trending-bar{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:0.75rem 1rem;
+  margin-bottom:1.5rem;overflow-x:auto;
+  scrollbar-width:none;
+}
+
+.trending-bar::-webkit-scrollbar{display:none}
+.trending-label{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--flame);flex-shrink:0}
+
+.trending-tag{
+  flex-shrink:0;font-size:12px;font-weight:600;
+  padding:4px 12px;border-radius:20px;
+  background:var(--surface3);color:var(--text2);border:1px solid var(--border);
+  cursor:pointer;transition:all 0.15s;
+}
+
+.trending-tag:hover{border-color:var(--border2);color:var(--text)}
+
+/* EMPTY */
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty-icon{font-size:2rem;margin-bottom:1rem}
+.empty-text{font-size:14px}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  nav{padding:0 1rem}
+  .hero{padding:2.5rem 1rem 2rem}
+  .main{padding:1rem}
+  .vote-btns{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(3,1fr)}
+  .tabs{overflow-x:auto}
+  .tab{padding:0.75rem 1rem;font-size:11px}
+}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    DebateDaily
+  </div>
+  <div class="nav-right" id="nav-auth">
+    <button class="btn btn-ghost btn-sm" onclick="openModal()">Sign In</button>
+    <button class="btn btn-flame btn-sm" onclick="openModal()">Join the Debate</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow"><div class="live-dot"></div>Live Now — Join the Conversation</div>
+  <h1 class="hero-title">One Topic.<br>Every <span class="accent">Day.</span></h1>
+  <p class="hero-sub">Hot debates. Real opinions. No filter. What's your take?</p>
+  <div class="countdown-strip">
+    <span>Next topic in</span>
+    <span class="countdown-time" id="countdown">--:--:--</span>
+    <span>·</span>
+    <span id="participant-count">0 debating now</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TRENDING -->
+  <div class="trending-bar">
+    <span class="trending-label">🔥 Hot</span>
+    <span class="trending-tag">#AIvsHumans</span>
+    <span class="trending-tag">#FutureOfWork</span>
+    <span class="trending-tag">#GenZ</span>
+    <span class="trending-tag">#ClimateCrisis</span>
+    <span class="trending-tag">#TechEthics</span>
+    <span class="trending-tag">#Democracy</span>
+    <span class="trending-tag">#Education</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('debate')">Today's Debate</button>
+    <button class="tab" onclick="switchTab('archive')">Past Topics</button>
+    <button class="tab" onclick="switchTab('insights')">Insights</button>
+    <button class="tab admin-only hidden" onclick="switchTab('admin')">Admin ⚡</button>
+  </div>
+
+  <!-- TAB: DEBATE -->
+  <div class="tab-panel active" id="tab-debate">
+
+    <!-- USER BAR -->
+    <div id="user-bar-wrap" class="hidden">
+      <div class="user-bar">
+        <div class="user-avatar" id="user-avatar-icon">?</div>
+        <div>
+          <div class="user-name" id="user-display-name">Guest</div>
+          <div class="user-mode" id="user-mode-label">Anonymous</div>
+        </div>
+        <button class="signout-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+
+    <!-- TODAY'S TOPIC -->
+    <div class="topic-main">
+      <div class="topic-header">
+        <span class="topic-header-label">🔥 Today's Debate</span>
+        <span class="topic-date" id="topic-date"></span>
+      </div>
+      <div class="topic-body">
+        <div class="topic-question" id="topic-question">Loading today's topic...</div>
+        <div class="topic-tags" id="topic-tags"></div>
+
+        <div class="vote-section">
+          <div class="vote-btns">
+            <button class="vote-btn for" id="vote-for" onclick="castVote('for')">
+              ✓ For It
+            </button>
+            <button class="vote-btn against" id="vote-against" onclick="castVote('against')">
+              ✗ Against It
+            </button>
+          </div>
+          <div class="vote-bar-row">
+            <span class="vote-bar-label for" id="pct-for">50%</span>
+            <div class="vote-bar-track"><div class="vote-bar-fill" id="vote-bar" style="width:50%"></div></div>
+            <span class="vote-bar-label against" id="pct-against">50%</span>
+          </div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-n" id="stat-voices">0</div><div class="stat-l">Voices</div></div>
+        <div class="stat-box"><div class="stat-n" id="stat-for">50%</div><div class="stat-l">In Favor</div></div>
+        <div class="stat-box"><div class="stat-n" id="stat-hot">0</div><div class="stat-l">Top Likes</div></div>
+      </div>
+    </div>
+
+    <!-- AUTH WALL -->
+    <div class="auth-wall" id="auth-wall">
+      <h3>Drop Your Take 🎤</h3>
+      <p>Sign in to post your opinion, upvote others, and get pinned for the best takes.</p>
+      <div class="auth-btns">
+        <button class="auth-btn google" onclick="signInGoogle()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google
+        </button>
+        <button class="auth-btn github" onclick="signInGithub()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </button>
+        <button class="auth-btn anon" onclick="signInAnon()">
+          👤 Stay Anonymous
+        </button>
+        <button class="auth-btn" onclick="openEmailModal()">
+          ✉ Email
+        </button>
+      </div>
+    </div>
+
+    <!-- COMMENT INPUT (shown after auth) -->
+    <div class="comment-box hidden" id="comment-box">
+      <div class="stance-pills">
+        <span style="font-size:12px;color:var(--text3);font-weight:600;align-self:center;">I'm:</span>
+        <button class="stance-pill sel-for" id="pill-for" onclick="selectPill('for')">For It</button>
+        <button class="stance-pill" id="pill-against" onclick="selectPill('against')">Against It</button>
+        <button class="stance-pill" id="pill-neutral" onclick="selectPill('neutral')">Just Watching</button>
+      </div>
+      <textarea class="comment-input" id="comment-input" placeholder="Make your case. Be bold. Be real. No cap." maxlength="300" oninput="updateChar()"></textarea>
+      <div class="input-footer">
+        <span class="char-counter"><span id="chars-left">300</span> left</span>
+        <button class="btn btn-flame btn-sm" onclick="postComment()">Post Take 🔥</button>
+      </div>
+    </div>
+
+    <!-- FEED -->
+    <div class="feed-header">
+      <span class="feed-title">The Debate Floor</span>
+      <div class="sort-group">
+        <button class="sort-btn active" id="sort-top" onclick="setSort('top')">Top</button>
+        <button class="sort-btn" id="sort-new" onclick="setSort('new')">New</button>
+        <button class="sort-btn" id="sort-for" onclick="setSort('for')">For</button>
+        <button class="sort-btn" id="sort-against" onclick="setSort('against')">Against</button>
+      </div>
+    </div>
+
+    <div id="comments-list">
+      <div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Loading debate...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: ARCHIVE -->
+  <div class="tab-panel" id="tab-archive">
+    <div class="archive-grid" id="archive-grid">
+      <div class="empty"><div class="empty-icon">📚</div><div class="empty-text">Past debates loading...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: INSIGHTS -->
+  <div class="tab-panel" id="tab-insights">
+    <div class="insights-grid" id="insights-grid">
+      <div class="insight-card">
+        <div class="insight-icon">🗣️</div>
+        <div class="insight-val" id="ins-total">0</div>
+        <div class="insight-label">Total Comments</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🔥</div>
+        <div class="insight-val" id="ins-topics">0</div>
+        <div class="insight-label">Topics Debated</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">⚡</div>
+        <div class="insight-val" id="ins-voters">0</div>
+        <div class="insight-label">Total Votes Cast</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">👑</div>
+        <div class="insight-val" id="ins-hottest">—</div>
+        <div class="insight-label">Most Debated Day</div>
+      </div>
+    </div>
+
+    <div class="section-title-lg">Engagement Trends</div>
+    <div id="topic-engagement-list" style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:3rem"></div>
+  </div>
+
+  <!-- TAB: ADMIN -->
+  <div class="tab-panel" id="tab-admin">
+    <div class="admin-panel">
+      <div class="admin-title">⚡ Admin — Set Tomorrow's Topic</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">AI-suggested hot topics for tomorrow. Select one or write your own.</p>
+
+      <div class="admin-suggestions" id="ai-suggestions">
+        <div style="font-size:13px;color:var(--text3);padding:1rem;text-align:center">
+          Click "Generate AI Topics" to get suggestions
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:1rem" onclick="generateAITopics()">
+        ✨ Generate AI Topics
+      </button>
+
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:0.5rem">Or write your own</div>
+      <input class="admin-input" id="custom-topic-input" placeholder="Type a debate question..."/>
+      <div style="display:flex;gap:8px;">
+        <input class="admin-input" id="custom-tags-input" placeholder="Tags (comma separated)" style="flex:1"/>
+        <button class="btn btn-flame" onclick="setTopic()">Set Live ⚡</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">Join DebateDaily</div>
+    <p class="modal-sub">Sign in to drop your take, get pinned, and build your debate record.</p>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="auth-btn google" onclick="signInGoogle()" style="justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+      <button class="auth-btn github" onclick="signInGithub()" style="justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        Continue with GitHub
+      </button>
+      <button class="auth-btn anon" onclick="signInAnon();closeModal()" style="justify-content:center">
+        👤 Join Anonymously
+      </button>
+    </div>
+
+    <div class="modal-divider">or use email</div>
+
+    <input class="modal-input" id="modal-email" type="email" placeholder="your@email.com"/>
+    <input class="modal-input" id="modal-password" type="password" placeholder="Password"/>
+    <button class="btn btn-flame" style="width:100%;margin-bottom:0.75rem" onclick="signInEmail()">Continue with Email</button>
+    <p style="font-size:12px;color:var(--text3);text-align:center">New? We'll create your account automatically.</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG — Replace with your own from Firebase Console
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// ============================================================
+// DEMO MODE — Works without Firebase (for local testing)
+// ============================================================
+const DEMO_MODE = true; // Set to false once Firebase is configured
+
+// ============================================================
+// DEMO DATA
+// ============================================================
+const DEMO_TOPIC = {
+  id: 'demo-today',
+  question: "Should AI systems be allowed to make autonomous decisions that affect human lives without any human review?",
+  tags: ["AI Ethics", "Technology", "Society"],
+  date: new Date().toDateString(),
+  votesFor: 847,
+  votesAgainst: 1203,
+  createdAt: new Date()
+};
+
+const DEMO_COMMENTS = [
+  { id:'c1', author:'Alex R.', initials:'AR', stance:'against', text:"The moment we hand over life-impacting decisions to systems that can't feel consequence, we lose the very thing that makes governance legitimate — accountability. Who do you sue when an AI denies your insurance claim?", likes:342, liked:false, time:'3h ago', uid:'u1' },
+  { id:'c2', author:'Priya M.', initials:'PM', stance:'for', text:"Humans make biased decisions every single day. A well-audited AI system doesn't have bad days, doesn't discriminate based on how someone looks, and processes evidence consistently. In medicine alone, this could save millions of lives.", likes:289, liked:false, time:'2h ago', uid:'u2' },
+  { id:'c3', author:'Jordan K.', initials:'JK', stance:'neutral', text:"The framing of 'autonomous vs human' is the wrong lens. The real question is: what decision types can AI handle well, and where does human judgment add irreplaceable value? It's not binary.", likes:198, liked:false, time:'1h ago', uid:'u3' },
+  { id:'c4', author:'Sam T.', initials:'ST', stance:'against', text:"We can't even get self-driving cars to work reliably. The hubris of thinking AI is ready to make decisions about bail, medical treatment, or job applications is staggering.", likes:156, liked:false, time:'45m ago', uid:'u4' },
+  { id:'c5', author:'Meera P.', initials:'MP', stance:'for', text:"Speed matters. In emergency medicine, triage decisions need to happen in seconds. An AI trained on millions of cases will outperform a tired doctor at 3am every single time.", likes:134, liked:false, time:'30m ago', uid:'u5' },
+  { id:'c6', author:'Chris B.', initials:'CB', stance:'neutral', text:"The real problem is we're asking AI to make decisions inside systems that humans themselves haven't agreed are fair. Fix the system first, then automate it.", likes:201, liked:false, time:'15m ago', uid:'u6' }
+];
+
+const DEMO_ARCHIVE = [
+  { id:'a1', question:"Is remote work ultimately better for society than office culture?", date:'Yesterday', votesFor:1203, votesAgainst:891, commentCount:567, tags:['Work','Society'] },
+  { id:'a2', question:"Should social media platforms be treated as public utilities and regulated accordingly?", date:'2 days ago', votesFor:988, votesAgainst:1456, commentCount:834, tags:['Tech','Politics'] },
+  { id:'a3', question:"Is a university degree still worth the financial cost in 2026?", date:'3 days ago', votesFor:654, votesAgainst:1102, commentCount:445, tags:['Education','Money'] },
+  { id:'a4', question:"Should voting be mandatory for all eligible citizens?", date:'4 days ago', votesFor:1345, votesAgainst:987, commentCount:723, tags:['Democracy','Policy'] },
+  { id:'a5', question:"Is capitalism the biggest barrier to solving the climate crisis?", date:'5 days ago', votesFor:1122, votesAgainst:1334, commentCount:912, tags:['Climate','Economics'] },
+  { id:'a6', question:"Should there be an age limit on holding political office?", date:'6 days ago', votesFor:1678, votesAgainst:445, commentCount:389, tags:['Politics','Age'] },
+];
+
+// ============================================================
+// APP STATE
+// ============================================================
+let state = {
+  user: null,
+  isAnon: false,
+  isAdmin: false,
+  topic: DEMO_TOPIC,
+  comments: JSON.parse(JSON.stringify(DEMO_COMMENTS)),
+  archive: DEMO_ARCHIVE,
+  sort: 'top',
+  selectedStance: 'for',
+  userVote: null,
+  nextCommentId: 100
+};
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  initCountdown();
+  renderTopic();
+  renderComments();
+  renderArchive();
+  renderInsights();
+  updateStats();
+
+  if (!DEMO_MODE) {
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      firebase.auth().onAuthStateChanged(handleAuthChange);
+    } catch(e) { console.log('Firebase not configured, running in demo mode'); }
+  }
+});
+
+// ============================================================
+// COUNTDOWN
+// ============================================================
+function initCountdown() {
+  function tick() {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24,0,0,0);
+    const diff = midnight - now;
+    const h = Math.floor(diff/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    document.getElementById('countdown').textContent =
+      `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    document.getElementById('participant-count').textContent =
+      `${(state.comments.length + state.topic.votesFor + state.topic.votesAgainst).toLocaleString()} engaged`;
+  }
+  tick();
+  setInterval(tick, 1000);
+  document.getElementById('topic-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+}
+
+// ============================================================
+// TOPIC RENDER
+// ============================================================
+function renderTopic() {
+  document.getElementById('topic-question').textContent = state.topic.question;
+  const tagsEl = document.getElementById('topic-tags');
+  tagsEl.innerHTML = state.topic.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  updateVoteBar();
+}
+
+function updateVoteBar() {
+  const {votesFor:f, votesAgainst:a} = state.topic;
+  const total = f+a || 1;
+  const pct = Math.round((f/total)*100);
+  document.getElementById('vote-bar').style.width = pct+'%';
+  document.getElementById('pct-for').textContent = pct+'%';
+  document.getElementById('pct-against').textContent = (100-pct)+'%';
+}
+
+// ============================================================
+// VOTE
+// ============================================================
+function castVote(v) {
+  if (state.userVote) { showToast('You already voted!'); return; }
+  state.topic[v==='for'?'votesFor':'votesAgainst']++;
+  state.userVote = v;
+  document.getElementById('vote-for').classList.toggle('voted', v==='for');
+  document.getElementById('vote-against').classList.toggle('voted', v==='against');
+  updateVoteBar();
+  updateStats();
+  showToast(v==='for'?'Voted: For It ✓':'Voted: Against It ✗');
+}
+
+// ============================================================
+// COMMENTS
+// ============================================================
+function getSorted() {
+  let cs = [...state.comments];
+  if (state.sort==='for') return cs.filter(c=>c.stance==='for').sort((a,b)=>b.likes-a.likes);
+  if (state.sort==='against') return cs.filter(c=>c.stance==='against').sort((a,b)=>b.likes-a.likes);
+  if (state.sort==='new') return cs.sort((a,b)=>b.id.toString().localeCompare(a.id.toString()));
+  return cs.sort((a,b)=>b.likes-a.likes);
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function renderComments() {
+  const list = document.getElementById('comments-list');
+  const sorted = getSorted();
+  const maxLikes = sorted.length ? Math.max(...sorted.map(c=>c.likes)) : 0;
+
+  if (!sorted.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🎤</div><div class="empty-text">No takes yet. Be the first.</div></div>';
+    return;
+  }
+
+  list.innerHTML = sorted.map((c,i)=>{
+    const isPin = state.sort==='top' && c.likes===maxLikes && c.likes>50;
+    const init = c.initials || getInitials(c.author);
+    return `
+    <div class="comment-card ${isPin?'pinned':''}">
+      ${isPin?`<div class="pin-badge">📌 Top Take — Pinned</div>`:''}
+      <div class="comment-head">
+        <div class="avatar ${c.stance}">${init}</div>
+        <div class="comment-meta-wrap">
+          <div class="comment-author">${c.author}</div>
+          <div class="comment-time">${c.time}</div>
+        </div>
+        <span class="stance-badge ${c.stance}">${c.stance==='for'?'For It':c.stance==='against'?'Against':'Neutral'}</span>
+      </div>
+      <div class="comment-text">${escHtml(c.text)}</div>
+      <div class="comment-actions">
+        <button class="action-btn ${c.liked?'upvoted':''}" onclick="toggleLike('${c.id}')">
+          ▲ ${c.likes}
+        </button>
+        <button class="action-btn" onclick="replyTo('${c.author}')">↩ Reply</button>
+        <button class="action-btn" onclick="shareComment('${c.id}')">↗ Share</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleLike(id) {
+  if (!state.user && !state.isAnon) { showToast('Sign in to upvote!'); return; }
+  const c = state.comments.find(x=>x.id===id);
+  if (!c) return;
+  c.liked = !c.liked;
+  c.likes += c.liked ? 1 : -1;
+  renderComments();
+  updateStats();
+}
+
+function replyTo(name) {
+  const input = document.getElementById('comment-input');
+  if (!input) return;
+  input.value = `@${name} `;
+  input.focus();
+  updateChar();
+}
+
+function shareComment(id) {
+  navigator.clipboard?.writeText(window.location.href+'#'+id).then(()=>showToast('Link copied!')).catch(()=>showToast('Copy the URL to share!'));
+}
+
+function setSort(s) {
+  state.sort = s;
+  ['top','new','for','against'].forEach(x=>{
+    document.getElementById('sort-'+x).classList.toggle('active', x===s);
+  });
+  renderComments();
+}
+
+function updateStats() {
+  const {votesFor:f, votesAgainst:a} = state.topic;
+  const total = f+a||1;
+  const pct = Math.round((f/total)*100);
+  const maxLikes = state.comments.length ? Math.max(...state.comments.map(c=>c.likes)) : 0;
+  document.getElementById('stat-voices').textContent = (state.comments.length + f + a).toLocaleString();
+  document.getElementById('stat-for').textContent = pct+'%';
+  document.getElementById('stat-hot').textContent = maxLikes.toLocaleString();
+}
+
+// ============================================================
+// POST COMMENT
+// ============================================================
+function selectPill(p) {
+  state.selectedStance = p;
+  ['for','against','neutral'].forEach(x=>{
+    const el = document.getElementById('pill-'+x);
+    el.className = 'stance-pill' + (x===p?' sel-'+p:'');
+  });
+}
+
+function updateChar() {
+  const val = document.getElementById('comment-input')?.value||'';
+  const el = document.getElementById('chars-left');
+  if(el) el.textContent = 300-val.length;
+}
+
+function postComment() {
+  const input = document.getElementById('comment-input');
+  const txt = input?.value?.trim();
+  if (!txt) { showToast('Write something first!'); return; }
+
+  const name = state.user?.displayName || (state.isAnon ? 'Anonymous' : 'Guest');
+  const newC = {
+    id: 'c'+(state.nextCommentId++),
+    author: name,
+    initials: getInitials(name),
+    stance: state.selectedStance,
+    text: txt,
+    likes: 0,
+    liked: false,
+    time: 'just now',
+    uid: state.user?.uid||'anon'
+  };
+
+  state.comments.unshift(newC);
+  if(input) input.value='';
+  updateChar();
+  renderComments();
+  updateStats();
+  showToast('Take posted! 🔥');
+}
+
+// ============================================================
+// ARCHIVE
+// ============================================================
+function renderArchive() {
+  const grid = document.getElementById('archive-grid');
+  if (!state.archive.length) { grid.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No past topics yet.</div></div>'; return; }
+  grid.innerHTML = state.archive.map(t=>{
+    const total = t.votesFor+t.votesAgainst||1;
+    const pct = Math.round((t.votesFor/total)*100);
+    return `
+    <div class="archive-card">
+      <div class="archive-date">${t.date}</div>
+      <div class="archive-q">${t.question}</div>
+      <div class="archive-bar"><div class="archive-fill" style="width:${pct}%"></div></div>
+      <div class="archive-meta">
+        <span style="color:var(--green)">${pct}% For</span>
+        <span>${(t.votesFor+t.votesAgainst).toLocaleString()} votes</span>
+        <span>${t.commentCount} takes</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// INSIGHTS
+// ============================================================
+function renderInsights() {
+  const totalComments = state.archive.reduce((s,t)=>s+t.commentCount,0) + state.comments.length;
+  const totalVotes = state.archive.reduce((s,t)=>s+t.votesFor+t.votesAgainst,0);
+  const hottestTopic = [...state.archive].sort((a,b)=>b.commentCount-a.commentCount)[0];
+
+  document.getElementById('ins-total').textContent = totalComments.toLocaleString();
+  document.getElementById('ins-topics').textContent = (state.archive.length+1).toLocaleString();
+  document.getElementById('ins-voters').textContent = totalVotes.toLocaleString();
+  document.getElementById('ins-hottest').textContent = hottestTopic ? hottestTopic.date : '—';
+
+  const engList = document.getElementById('topic-engagement-list');
+  const sorted = [...state.archive].sort((a,b)=>b.commentCount-a.commentCount).slice(0,6);
+  const max = sorted[0]?.commentCount||1;
+  engList.innerHTML = sorted.map(t=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:0.75rem 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--text3);min-width:80px">${t.date}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--text);margin-bottom:6px;line-height:1.3">${t.question.slice(0,80)}...</div>
+        <div style="height:4px;border-radius:99px;background:var(--surface2);overflow:hidden">
+          <div style="height:100%;border-radius:99px;background:var(--flame);width:${Math.round((t.commentCount/max)*100)}%;transition:width 0.6s"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--flame);min-width:60px;text-align:right">${t.commentCount} takes</div>
+    </div>`).join('');
+}
+
+// ============================================================
+// ADMIN — AI TOPIC GENERATION
+// ============================================================
+async function generateAITopics() {
+  const el = document.getElementById('ai-suggestions');
+  el.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text3);font-size:13px">✨ Generating hot topics...</div>';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{
+          role:'user',
+          content:`Generate 4 extremely provocative, debate-worthy questions for a public debate platform. 
+          These should be hot-button topics that spark strong opinions across political, social, and technology themes.
+          Make them specific, controversial but not hateful, and thought-provoking.
+          Return ONLY a JSON array of objects with: {"question": "...", "tags": ["tag1","tag2"], "hotScore": 85}
+          Hot score is 1-100 indicating how likely it generates debate. No markdown, just JSON.`
+        }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text||'[]';
+    let topics;
+    try { topics = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
+    catch { topics = []; }
+    renderAISuggestions(topics);
+  } catch(e) {
+    // Fallback demo suggestions
+    renderAISuggestions([
+      { question:"Should billionaires be legally required to give away 90% of their wealth?", tags:["Wealth","Policy","Inequality"], hotScore:94 },
+      { question:"Is it ethical to have children in an era of climate collapse?", tags:["Climate","Ethics","Family"], hotScore:91 },
+      { question:"Should social media companies be held criminally liable for teen mental health crises?", tags:["Tech","Mental Health","Law"], hotScore:88 },
+      { question:"Has working from home made Gen Z less competitive in the job market?", tags:["GenZ","Work","Economy"], hotScore:85 },
+    ]);
+  }
+}
+
+function renderAISuggestions(topics) {
+  const el = document.getElementById('ai-suggestions');
+  if (!topics.length) { el.innerHTML='<div style="color:var(--text3);text-align:center;padding:1rem;font-size:13px">Could not generate suggestions. Try again.</div>'; return; }
+  el.innerHTML = topics.map((t,i)=>`
+    <div class="suggestion-item" onclick="selectSuggestion(${i})">
+      <div class="suggestion-text">${t.question}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="suggestion-score">🔥 ${t.hotScore}</span>
+        <span style="font-size:10px;color:var(--text3)">${t.tags?.join(', ')||''}</span>
+      </div>
+    </div>`).join('');
+  window._aiTopics = topics;
+}
+
+function selectSuggestion(i) {
+  const t = window._aiTopics?.[i];
+  if (!t) return;
+  document.getElementById('custom-topic-input').value = t.question;
+  document.getElementById('custom-tags-input').value = (t.tags||[]).join(', ');
+}
+
+function setTopic() {
+  const q = document.getElementById('custom-topic-input').value.trim();
+  const tags = document.getElementById('custom-tags-input').value.split(',').map(t=>t.trim()).filter(Boolean);
+  if (!q) { showToast('Enter a topic first!'); return; }
+  state.topic = { ...state.topic, question:q, tags:tags.length?tags:['General'], votesFor:0, votesAgainst:0 };
+  state.userVote = null;
+  state.comments = [];
+  document.getElementById('vote-for').classList.remove('voted');
+  document.getElementById('vote-against').classList.remove('voted');
+  renderTopic();
+  renderComments();
+  updateStats();
+  switchTab('debate');
+  showToast('🔥 New topic is live!');
+}
+
+// ============================================================
+// AUTH (DEMO + Firebase)
+// ============================================================
+function handleAuthChange(user) {
+  if (user) {
+    state.user = user;
+    state.isAdmin = user.email === 'your-admin-email@gmail.com'; // Replace with your email
+    updateAuthUI();
+  } else {
+    state.user = null;
+    updateAuthUI();
+  }
+}
+
+function updateAuthUI() {
+  const isLoggedIn = state.user || state.isAnon;
+  document.getElementById('auth-wall').classList.toggle('hidden', isLoggedIn);
+  document.getElementById('comment-box').classList.toggle('hidden', !isLoggedIn);
+  document.getElementById('user-bar-wrap').classList.toggle('hidden', !isLoggedIn);
+
+  if (isLoggedIn) {
+    const name = state.user?.displayName || (state.isAnon ? 'Anonymous Debater' : 'Guest');
+    const initials = getInitials(name);
+    document.getElementById('user-avatar-icon').textContent = initials;
+    document.getElementById('user-display-name').textContent = name;
+    document.getElementById('user-mode-label').textContent = state.user?.email || (state.isAnon?'Anonymous mode':'Guest');
+    document.getElementById('nav-auth').innerHTML = `
+      <span style="font-size:13px;color:var(--text2);font-weight:600">${name}</span>
+      <button class="btn btn-ghost btn-sm" onclick="signOut()">Sign out</button>`;
+  }
+
+  if (state.isAdmin) {
+    document.querySelectorAll('.admin-only').forEach(el=>el.classList.remove('hidden'));
+  }
+}
+
+function signInGoogle() {
+  if (DEMO_MODE) {
+    state.user = { displayName:'Google User', email:'user@gmail.com', uid:'demo-google' };
+    state.isAnon = false;
+    closeModal();
+    updateAuthUI();
+    showToast('Signed in with Google ✓');
+    return;
+  }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).then(()=>closeModal()).catch(e=>showToast('Error: '+e.message));
+}
+
+function signInGithub() {
+  if (DEMO_MODE) {
+    state.user = { displayName:'GitHub User', email:'user@github.com', uid:'demo-github' };
+    state.isAnon = false;
+    closeModal();
+    updateAuthUI();
+    showToast('Signed in with GitHub ✓');
+    return;
+  }
+  const provider = new firebase.auth.GithubAuthProvider();
+  firebase.auth().signInWithPopup(provider).then(()=>closeModal()).catch(e=>showToast('Error: '+e.message));
+}
+
+function signInAnon() {
+  if (DEMO_MODE) {
+    state.isAnon = true;
+    state.user = null;
+    closeModal();
+    updateAuthUI();
+    showToast('Joined anonymously 👤');
+    return;
+  }
+  firebase.auth().signInAnonymously().then(()=>{
+    state.isAnon = true;
+    closeModal();
+    updateAuthUI();
+    showToast('Joined anonymously 👤');
+  }).catch(e=>showToast('Error: '+e.message));
+}
+
+function signInEmail() {
+  const email = document.getElementById('modal-email').value.trim();
+  const password = document.getElementById('modal-password').value;
+  if (!email||!password) { showToast('Enter email and password'); return; }
+  if (DEMO_MODE) {
+    state.user = { displayName:email.split('@')[0], email, uid:'demo-email' };
+    state.isAnon = false;
+    closeModal();
+    updateAuthUI();
+    showToast('Signed in ✓');
+    return;
+  }
+  firebase.auth().createUserWithEmailAndPassword(email,password)
+    .catch(()=>firebase.auth().signInWithEmailAndPassword(email,password))
+    .then(()=>closeModal())
+    .catch(e=>showToast('Error: '+e.message));
+}
+
+function signOut() {
+  state.user = null;
+  state.isAnon = false;
+  state.isAdmin = false;
+  document.getElementById('nav-auth').innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="openModal()">Sign In</button>
+    <button class="btn btn-flame btn-sm" onclick="openModal()">Join the Debate</button>`;
+  updateAuthUI();
+  if (!DEMO_MODE) firebase.auth().signOut();
+  showToast('Signed out');
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function openModal() { document.getElementById('auth-modal').classList.add('open'); }
+function closeModal() { document.getElementById('auth-modal').classList.remove('open'); }
+function openEmailModal() { openModal(); }
+document.getElementById('auth-modal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    const tabs=['debate','archive','insights','admin'];
+    el.classList.toggle('active', tabs[i]===t || (tabs.length<=3&&i===3&&t==='admin'));
+  });
+  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
+  const panel = document.getElementById('tab-'+t);
+  if(panel) panel.classList.add('active');
+
+  // Re-sync tab buttons
+  const tabEls = document.querySelectorAll('.tab');
+  const tabNames=['debate','archive','insights','admin'];
+  tabEls.forEach((el,i)=>{ if(tabNames[i]) el.classList.toggle('active',tabNames[i]===t); });
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
