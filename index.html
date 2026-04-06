@@ -908,6 +908,7 @@ const FIREBASE_CONFIG = {
 // ============================================================
 // DEMO MODE — Works without Firebase (for local testing)
 // ============================================================
+const OPENAI_KEY = "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";
 const DEMO_MODE = true; // Set to false once Firebase is configured
 
 // ============================================================
@@ -1143,10 +1144,57 @@ function updateChar() {
   if(el) el.textContent = 300-val.length;
 }
 
-function postComment() {
+async function postComment() {
   const input = document.getElementById('comment-input');
   const txt = input?.value?.trim();
   if (!txt) { showToast('Write something first!'); return; }
+
+  // Show checking state
+  const btn = document.querySelector('.btn-flame.btn-sm');
+  btn.textContent = '🤖 Checking...';
+  btn.disabled = true;
+
+  try {
+    // AI MODERATION CHECK
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: `You are a debate platform moderator. Analyze this comment and respond with ONLY a JSON object like this: {"status": "approved", "reason": ""} or {"status": "flagged", "reason": "brief reason"}.
+
+Flag if: spam, hate speech, pure insults, less than 5 words, completely off-topic gibberish.
+Approve if: opinion, argument, question, disagreement, even if strong or controversial.
+
+Comment: "${txt}"`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const result = JSON.parse(data.choices[0].message.content);
+
+    if (result.status === 'flagged') {
+      showToast(`🚫 ${result.reason}`);
+      btn.textContent = 'Post Take 🔥';
+      btn.disabled = false;
+      return;
+    }
+
+  } catch(e) {
+    // If moderation fails, let comment through
+    console.log('Moderation check failed, allowing comment');
+  }
+
+  // APPROVED — post the comment
+  btn.textContent = 'Post Take 🔥';
+  btn.disabled = false;
 
   const name = state.user?.displayName || (state.isAnon ? 'Anonymous' : 'Guest');
   const newC = {
