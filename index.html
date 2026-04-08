@@ -975,7 +975,40 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       firebase.initializeApp(FIREBASE_CONFIG);
       firebase.auth().onAuthStateChanged(handleAuthChange);
-    } catch(e) { console.log('Firebase not configured, running in demo mode'); }
+      const db = firebase.firestore();
+      window._db = db;
+      const today = new Date().toISOString().split('T')[0];
+      window._topicId = today;
+      // Load or create today's topic
+      db.collection('topics').doc(today).get().then(doc => {
+        if (doc.exists) {
+          state.topic = { ...state.topic, ...doc.data() };
+          renderTopic(); updateStats();
+        } else {
+          db.collection('topics').doc(today).set({
+            question: state.topic.question,
+            tags: state.topic.tags,
+            votesFor: 0,
+            votesAgainst: 0,
+            createdAt: new Date()
+          });
+        }
+      });
+      // Live real-time comments listener
+      db.collection('comments')
+        .where('topicId','==',today)
+        .orderBy('createdAt','desc')
+        .onSnapshot(snap => {
+          state.comments = snap.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+            time: timeAgo(d.data().createdAt?.toDate?.()),
+            liked: false
+          }));
+          renderComments();
+          updateStats();
+        });
+    } catch(e) { console.log('Firebase error:', e); }
   }
 });
 
@@ -1083,6 +1116,15 @@ function renderComments() {
       </div>
     </div>`;
   }).join('');
+}
+
+function timeAgo(date) {
+  if (!date) return 'just now';
+  const s = Math.floor((new Date() - date) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60)+'m ago';
+  if (s < 86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
 }
 
 function escHtml(str) {
@@ -1211,11 +1253,24 @@ Comment: "${txt}"`
     uid: state.user?.uid||'anon'
   };
 
-  state.comments.unshift(newC);
+  if (!DEMO_MODE && window._db) {
+    window._db.collection('comments').add({
+      topicId: window._topicId,
+      author: newC.author,
+      initials: newC.initials,
+      stance: newC.stance,
+      text: newC.text,
+      likes: 0,
+      uid: newC.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(e => console.log('Save error:', e));
+  } else {
+    state.comments.unshift(newC);
+    renderComments();
+    updateStats();
+  }
   if(input) input.value='';
   updateChar();
-  renderComments();
-  updateStats();
   showToast('Take posted! 🔥');
 }
 
@@ -1355,7 +1410,7 @@ function setTopic() {
 function handleAuthChange(user) {
   if (user) {
     state.user = user;
-    state.isAdmin = user.email === 'your-admin-email@gmail.com'; // Replace with your email
+    state.isAdmin = user.email === 'prangbulla2406@gmail.com';
     updateAuthUI();
   } else {
     state.user = null;
